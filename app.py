@@ -1,24 +1,14 @@
-# app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_cors import CORS
-import base64
-from PIL import Image
-import io
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS
+CORS(app)  # Enable CORS for all domains on all routes
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
-    data = request.json['image']
-    # Decode the base64 string
-    image_data = base64.b64decode(data.split(',')[1])
-    image = Image.open(io.BytesIO(image_data))
-    image.save("received_image.jpeg")  # Save or process the image as needed
-    
-    # Respond back to the frontend
-    return jsonify({"message": "Image received successfully!"})
-    pass
+    image = request.files['image']
+    image.save("received_image.jpeg")
+    return "Image received successfully", 200
 
 if __name__ == '__main__':
     app.run(debug=True)

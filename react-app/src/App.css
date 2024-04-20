@@ -8,7 +8,7 @@ body {
   }
   
   .webcam-container {
-    width: 50%; /* Webcam takes half of the screen width */
+    width: 100%; /* Webcam takes half of the screen width */
     display: flex;
     flex-direction: column;
     align-items: center;

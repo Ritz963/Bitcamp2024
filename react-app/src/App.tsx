@@ -12,16 +12,21 @@ function App() {
   const [frame, setFrame] = useState<string>('');
   const [streaming, setStreaming] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(true);  // State to manage modal visibility
+  const [score, setScore] = useState(0);
 
 
+  const sendCommand = (command) => {
+    socket.emit('drone_command', { command });
+  };
 
   const startStreaming = () => {
-      socket.on('frame', (data: { data: string }) => {
-          setFrame(data.data);
-      });
-      socket.emit('start_stream');
-      setStreaming(true);
-  };
+    socket.on('frame', (data: { data: string, score: number }) => {
+        setFrame(data.data);
+        setScore(data.score);  // Update score state
+    });
+    socket.emit('start_stream');
+    setStreaming(true);
+};
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -32,20 +37,33 @@ function App() {
     closeModal();
 }
   
-  return (
-    <div className="app-container">
-        <div style={{ width: '50vw', height: '50vh', overflow: 'hidden', display: streaming ? 'block' : 'none' }}>
-            <img src={`data:image/jpeg;base64,${frame}`} alt="Webcam Stream" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
-        {isModalOpen && (
-          <div className='ok'>
-            <h2 className='mogulator'>Mogulator</h2>
-            <img src={mogbotImage} alt="Mogbot" style={{ width: '500px' , margin: '-130px'}} />
-            <p className='mogdes'>Mogcopter performs a mog-by to use our mogulator to mogulate your mog score</p>
-            <button className="modal-close-button" onClick={handleButtonClick}>START MOG ANALYSIS</button>         
+return (
+  <div className="app-container">
+      {score !== null && (
+          <div className="score-display">
+              Current Score: {score}
           </div>
-        )}
-    </div>
+      )}
+      <div style={{ width: '100%', height: '100%', overflow: 'hidden', display: streaming ? 'block' : 'none' }}>
+          <img src={`data:image/jpeg;base64,${frame}`} alt="Webcam Stream" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+      {isModalOpen && (
+          <div className='ok'>
+              <h2 className='mogulator'>Mogulator</h2>
+              <img src={mogbotImage} alt="Mogbot" style={{ width: '500px', margin: '-130px'}} />
+              <p className='mogdes'>Mogcopter performs a mog-by to use our mogulator to mogulate your mog score</p>
+              <button className="modal-close-button" onClick={handleButtonClick}>START MOG ANALYSIS</button>         
+          </div>
+      )}
+      <div className="drone-controls">
+          <button onClick={() => sendCommand('takeoff')}>Take Off</button>
+          <button onClick={() => sendCommand('land')}>Land</button>
+          <button onClick={() => sendCommand('up')}>Move Up</button>
+          <button onClick={() => sendCommand('down')}>Move Down</button>
+          <button onClick={() => sendCommand('left')}>Move Left</button>
+          <button onClick={() => sendCommand('right')}>Move Right</button>
+      </div>
+  </div>
 );
 }
 

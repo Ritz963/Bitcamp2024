@@ -3,21 +3,33 @@ from flask_socketio import SocketIO, emit
 from djitellopy import Tello
 import cv2
 import dlib
+import threading
 from threading import Thread
 import base64
 import numpy as np
 from time import sleep
 from math import *
 import time
+from socket import socket, AF_INET, SOCK_DGRAM, error as socket_error
+import socket
+from flask_cors import CORS
 
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 hog_face_detector = dlib.get_frontal_face_detector()
 dlib_facelandmark = dlib.shape_predictor("./shape_predictor_68_face_landmarks.dat.bz2/shape_predictor_68_face_landmarks.dat")
-tello = Tello()
 
+def setup_tello():
+    sock = socket.socket()
+    sock.bind(('', 8889))
+    global tello
+    print("about to init")
+    tello = Tello()
+    print("everything worked ")
+    
 
 def gen_frames():
 
@@ -41,18 +53,18 @@ def gen_frames():
                 for n in range(0, 68):
                     x = face_landmarks.part(n).x
                     y = face_landmarks.part(n).y
-                    cv2.circle(frame, (x, y), 1, (0, 255, 255), 1)
+                    cv2.circle(RGBFrame, (x, y), 1, (0, 255, 255), 1)
 
                 score = rizz_calculator(face_landmarks)
-            ret, buffer = cv2.imencode('.jpg', frame)
+            ret, buffer = cv2.imencode('.jpg', RGBFrame)
             frame_encoded = base64.b64encode(buffer).decode('utf-8')
             yield (frame_encoded, score)
     finally:
             tello.streamoff()
 
-def video_stream():
+def video_stream(frame_generator):
     print("Starting video stream...")
-    for frame_encoded, score in gen_frames():
+    for frame_encoded, score in frame_generator():
         print(f"Emitting score {score}")
         socketio.emit('frame', {'data': frame_encoded, 'score': score})
         socketio.sleep(0.05)
@@ -125,9 +137,9 @@ def handle_drone_command(data):
 
 @socketio.on('start_stream')
 def handle_stream():
-    print("Stream requested")
-    thread = Thread(target=video_stream)
-    thread.start()
+    setup_tello()
+    print('Starting video stream...')
+    Thread(target=video_stream, args=(gen_frames,), daemon=True).start()
 
 @app.route('/')
 def index():

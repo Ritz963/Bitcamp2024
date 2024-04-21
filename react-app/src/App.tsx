@@ -1,33 +1,29 @@
+// App.tsx
 import React, { useEffect, useState } from 'react';
-import io, { Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 
-// Define the URL of the Socket.IO server
-const SERVER_URL = 'http://localhost:5000';
+const socket = io('http://127.0.0.1:5000');
 
-const App: React.FC = () => {
-  const [frame, setFrame] = useState<string>('');
+function App() {
+    const [frame, setFrame] = useState<string>('');
 
-  useEffect(() => {
-    const socket: Socket = io(SERVER_URL);
+    useEffect(() => {
+        socket.on('frame', (data: { data: string }) => {
+            setFrame(data.data);
+        });
 
-    // Setup event listener for receiving video frames
-    socket.on('video_frame', (data: { data: string }) => {
-      setFrame(data.data);
-    });
+        socket.emit('start_stream');
 
-    // Cleanup function to disconnect the socket when the component unmounts
-    return () => {
-      socket.off('video_frame');
-      socket.disconnect();
-    };
-  }, []);
+        return () => {
+            socket.off('frame');
+        };
+    }, []);
 
-  return (
-    <div className="App">
-      {/* Display the video frame received from the server */}
-      <img src={frame} alt="Video Feed" style={{ width: '100%', height: 'auto' }} />
-    </div>
-  );
-};
+    return (
+        <div>
+            <img src={`data:image/jpeg;base64,${frame}`} alt="Webcam Stream" />
+        </div>
+    );
+}
 
 export default App;

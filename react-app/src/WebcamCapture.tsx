@@ -14,7 +14,7 @@ const WebcamCapture = () => {
         .then(blob => {
           const formData = new FormData();
           formData.append('image', blob, 'screenshot.jpeg');
-          return fetch('http://localhost:5000/upload', {
+          return fetch('http://127.0.0.1:5000/upload', {
             method: 'POST',
             body: formData,
           });

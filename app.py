@@ -1,42 +1,54 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+from djitellopy import Tello
 import cv2
 import dlib
 from threading import Thread
 import base64
 import numpy as np
+from time import sleep
 from math import *
 import time
+
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 hog_face_detector = dlib.get_frontal_face_detector()
 dlib_facelandmark = dlib.shape_predictor("./shape_predictor_68_face_landmarks.dat.bz2/shape_predictor_68_face_landmarks.dat")
+tello = Tello()
+
 
 def gen_frames():
-    camera = cv2.VideoCapture(0)
-    while True:
-        success, frame = camera.read()
-        if not success:
-            break
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        RGBFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        faces = hog_face_detector(gray)
-        score = 0
-        for face in faces:
-            face_landmarks = dlib_facelandmark(gray, face)
+    tello.connect()
+    tello.streamon()
+    print("Tello Battery: " + str(tello.get_battery()))
 
-            for n in range(0, 68):
-                x = face_landmarks.part(n).x
-                y = face_landmarks.part(n).y
-                cv2.circle(frame, (x, y), 1, (0, 255, 255), 1)
+    try:
+        while True:
+            
+            frame = cv2.resize(tello.get_frame_read().frame, (640, 480))
 
-            score = rizz_calculator(face_landmarks)
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame_encoded = base64.b64encode(buffer).decode('utf-8')
-        yield (frame_encoded, score)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            RGBFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            faces = hog_face_detector(gray)
+            score = 0
+            for face in faces:
+                face_landmarks = dlib_facelandmark(gray, face)
+
+                for n in range(0, 68):
+                    x = face_landmarks.part(n).x
+                    y = face_landmarks.part(n).y
+                    cv2.circle(frame, (x, y), 1, (0, 255, 255), 1)
+
+                score = rizz_calculator(face_landmarks)
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame_encoded = base64.b64encode(buffer).decode('utf-8')
+            yield (frame_encoded, score)
+    finally:
+            tello.streamoff()
 
 def video_stream():
     print("Starting video stream...")
@@ -91,6 +103,26 @@ def rizz_calculator(face):
     weights = {"mouth": 20, "eyes": 20, "jaw": 30, "sym": 30}
     return weights["mouth"]*calc_mouth(face) + weights["eyes"]*calc_eyes(face) + weights["jaw"]*calc_jaw(face) + weights["sym"]*calc_sym(face)
 
+
+@socketio.on('drone_command')
+def handle_drone_command(data):
+    command = data['command']
+    print(f"Received drone command: {command}")
+    if command == 'takeoff':
+        tello.takeoff()
+    elif command == 'land':
+        tello.land()
+    elif command == 'up':
+        tello.move_up(20)  # Modify as needed
+    elif command == 'down':
+        tello.move_down(20)
+    elif command == 'left':
+        tello.move_left(20)
+    elif command == 'right':
+        tello.move_right(20)
+
+
+
 @socketio.on('start_stream')
 def handle_stream():
     print("Stream requested")
@@ -108,6 +140,11 @@ def test_connect():
 @socketio.on('disconnect')
 def test_disconnect():
     print('Client disconnected')
+    # Ensure the drone is safely handled on disconnect
+    tello.land()
+    tello.end()  # Properly end the Tello session
+
+
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

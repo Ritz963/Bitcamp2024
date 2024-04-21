@@ -131,10 +131,8 @@ if __name__=="__main__":
                 
                 x = face_landmarks.part(n).x
                 y = face_landmarks.part(n).y
-                if(n == 67):
-                    cv2.circle(RGBFrame, (x, y), 1, (0, 0, 0), 1)
-                else:
-                    cv2.circle(RGBFrame, (x, y), 1, (0, 255, 255), 1)
+
+                cv2.circle(RGBFrame, (x, y), 1, (0, 255, 255), 1)
             time_e = perf_counter()
             if (time_e-time_s) > 1.0:
                 score = rizz_calculator(face_landmarks)

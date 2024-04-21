@@ -86,3 +86,15 @@ h2.mogulator {
     font-family: "Jersey 25", sans-serif;
     font-weight: 600
 }
+
+.score-display {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    text-align: center;
+    background-color: #fff;
+    color: #333;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1050; 
+}
